@@ -1,0 +1,502 @@
+   1 0000               #
+   2 0000               # FILE:         $File$
+   3 0000               # AUTHOR:       Justin Gonzales, Section #03
+   4 0000               #
+   5 0000               # DESCRIPTION:
+   6 0000               #   This program is an implementation of the forest fire model
+   7 0000               #   cellular automata in MIPS assembly
+   8 0000               #   
+   9 0000               # ARGUMENTS:
+  10 0000               #   None
+  11 0000               #
+  12 0000               # INPUT:
+  13 0000               #   The size of the grid's edges, the # of generations to run,
+  14 0000               #   the wind direction, and the 0th generation grid from STDIN
+  15 0000               #
+  16 0000               # OUTPUT:
+  17 0000               #   A visualization of the following generations of the inputted
+  18 0000               #   grid - complete with formatted banner and fluff.
+  19 0000               #
+  20 0000               #
+  21 0000               
+  22 0000               #-------------------------------
+  23 0000                
+  24 0000               #
+  25 0000               # Numeric Constants and syscall codes
+  26 0000               #
+  27 0000               GRID_MIN = 4
+  28 0000               GRID_MAX = 30
+  29 0000               GEN_MIN = 0
+  30 0000               GEN_MAX = 20
+  31 0000               PRINT_STRING = 4
+  32 0000               READ_INT = 5
+  33 0000               PRINT_INT = 1
+  34 0000               READ_STRING = 8
+  35 0000               #READ_CHAR = 12
+  36 0000               
+  37 0000               #
+  38 0000               # DATA AREAS
+  39 0000               #
+  40 0000               	.data
+  41 0000               	.align  2       # word data must be on word boundaries
+  42 0000               
+  43 0000               input_block:
+  44 0000 FFFFFFFF		.word   -1		# the grid size
+  45 0004 FFFFFFFF		.word   -1	     	# the num of generations
+  46 0008 5100    	 	.asciiz "Q"     	# the wind direction
+  47 000a 0000    		.word	array		# set of strings
+     000c 00000010
+  48 0010               
+  49 0010               # need either to put together 30 30-byte arrays, or 1 900 byte array
+  50 0010               # null terms at end of lines for string printing?
+  51 0010               # index by grid size
+  52 0010               array:
+  53 0010 00000000		.space 930
+          00000000
+          00000000
+          00000000
+          00000000
+          00000000
+  54 03b2               
+  55 03b2               
+  56 03b2               	.align	0	# string data doesn't have to be aligned
+  57 03b2               
+  58 03b2               fig_char:
+  59 03b2 30313233		.asciiz "01234567898765432123456789876543210"
+          34353637
+          38393837
+          36353433
+          32313233
+          34353637
+  60 03d6               	# not a char but similar to what was provided in lab4
+  61 03d6               	# buffer for reading in string
+  62 03d6               
+  63 03d6               space:
+  64 03d6 2000    		.asciiz " "
+  65 03d8               
+  66 03d8               newline:
+  67 03d8 0A00    		.asciiz "\n"
+  68 03da               
+  69 03da               grid_error_str:
+  70 03da 4552524F		.asciiz "ERROR: invalid grid size\n"
+          523A2069
+          6E76616C
+          69642067
+          72696420
+          73697A65
+  71 03f4               
+  72 03f4               gen_error_str:
+  73 03f4 4552524F		.asciiz "ERROR: invalid number of generations\n"
+          523A2069
+          6E76616C
+          6964206E
+          756D6265
+          72206F66
+  74 041a               
+  75 041a               wind_error_str:
+  76 041a 4552524F		.asciiz "ERROR: invalid wind direction\n"
+          523A2069
+          6E76616C
+          69642077
+          696E6420
+          64697265
+  77 0439               
+  78 0439               bad_char_error_str:
+  79 0439 4552524F		.asciiz	"ERROR: invalid character in grid\n"
+          523A2069
+          6E76616C
+          69642063
+          68617261
+          63746572
+  80 045b               
+  81 045b               banner_outline:	# remember newline after second one
+  82 045b 2B2D2D2D		.asciiz "+-------------+"
+          2D2D2D2D
+          2D2D2D2D
+          2D2D2B00
+  83 046b               
+  84 046b               banner_middle:
+  85 046b 7C20464F		.asciiz	"| FOREST FIRE |"
+          52455354
+          20464952
+          45207C00
+  86 047b               
+  87 047b               #-------------------------------
+  88 047b               
+  89 047b               #
+  90 047b               # CODE AREA
+  91 047b               #
+  92 0000               	.text
+  93 0000               	.align	2
+  94 0000               
+  95 0000               	.globl	main
+  96 0000               	.globl	update_board
+  97 0000               	.globl	print_board
+  98 0000               
+  99 0000               #
+ 100 0000               # EXECUTION BEGINS HERE
+ 101 0000               #
+ 102 0000               main:
+ 103 0000 23BDFFFC		addi	$sp, $sp, -4	# allocate space for return addr
+ 104 0004 AFBF0000		sw	$ra, 0($sp)
+ 105 0008               
+ 106 0008 0C00001B		jal	output_banner	# output starting banner and \n
+ 107 000c               
+ 108 000c 3C040000		la	$a0, input_block
+     0010 34840000
+ 109 0014 3C080000		la	$t0, array
+     0018 35080000
+ 110 001c AC88000C		sw	$t0, 12($a0)	# set up parameter struct
+ 111 0020               
+ 112 0020 3405001E		la	$a1, GRID_MAX	# max num of lines possible
+ 113 0024 0C00003C		jal	read_input
+ 114 0028               	
+ 115 0028               	# a0 now contains all supplied input
+ 116 0028               
+ 117 0028 0C000074		jal	error_check
+ 118 002c               
+ 119 002c 1440000C		bne	$v0, $zero, main_done	# exit if errors found
+ 120 0030               	
+ 121 0030               	# input confirmed to be valid
+ 122 0030               
+ 123 0030 34100000		li	$s0, 0		# s0 represents current generation #
+ 124 0034 02002821		move	$a1, $s0	# move s0 into a1 for initial printing
+ 125 0038               
+ 126 0038 0C000000		jal	print_board	# print initial board
+ 127 003c               
+ 128 003c 8C910004		lw	$s1, 4($a0)	# s1 holds num of generations
+ 129 0040 22310001		addi	$s1, $s1, 1	# add 1 to account for less than
+ 130 0044               
+ 131 0044               main_gen_loop:
+ 132 0044               	# loop for each generation
+ 133 0044 22100001		addi	$s0, $s0, 1	# increment which generation
+ 134 0048 0211482A		slt	$t1, $s0, $s1
+ 135 004c 11200004		beq	$t1, $zero, main_done
+ 136 0050               
+ 137 0050               	# update the board
+ 138 0050 0C000000		jal update_board
+ 139 0054               
+ 140 0054               	# original array should now be updated to be new array
+ 141 0054               
+ 142 0054               	# print the updated board
+ 143 0054 02002821		move	$a1, $s0
+ 144 0058 0C000000		jal	print_board
+ 145 005c               
+ 146 005c 08000011		j	main_gen_loop
+ 147 0060               
+ 148 0060               main_done:
+ 149 0060 8FBF0000		lw	$ra, 0($sp)
+ 150 0064 23BD0004		addi	$sp, $sp, 4
+ 151 0068 03E00008		jr	$ra
+ 152 006c               #-------------------------------
+ 153 006c               
+ 154 006c               #
+ 155 006c               # Name:     output_banner
+ 156 006c               # Description:  prints the starting banner to stdout
+ 157 006c               # Arguments:    none
+ 158 006c               # Returns:      none
+ 159 006c               # Destroys:     none
+ 160 006c               #
+ 161 006c               output_banner:
+ 162 006c 23BDFFFC		addi	$sp, $sp, -4
+ 163 0070 AFBF0000		sw	$ra, 0($sp)
+ 164 0074               
+ 165 0074 34020004		li	$v0, PRINT_STRING
+ 166 0078 3C040000		la	$a0, banner_outline
+     007c 34840000
+ 167 0080 0000000C		syscall
+ 168 0084               
+ 169 0084 34020004		li	$v0, PRINT_STRING
+ 170 0088 3C040000		la	$a0, newline
+     008c 34840000
+ 171 0090 0000000C		syscall
+ 172 0094               
+ 173 0094 34020004		li	$v0, PRINT_STRING
+ 174 0098 3C040000		la	$a0, banner_middle
+     009c 34840000
+ 175 00a0 0000000C		syscall
+ 176 00a4               
+ 177 00a4 34020004		li	$v0, PRINT_STRING
+ 178 00a8 3C040000		la	$a0, newline
+     00ac 34840000
+ 179 00b0 0000000C		syscall
+ 180 00b4               
+ 181 00b4 34020004		li	$v0, PRINT_STRING
+ 182 00b8 3C040000		la	$a0, banner_outline
+     00bc 34840000
+ 183 00c0 0000000C		syscall
+ 184 00c4               
+ 185 00c4 34020004		li	$v0, PRINT_STRING
+ 186 00c8 3C040000		la	$a0, newline
+     00cc 34840000
+ 187 00d0 0000000C		syscall
+ 188 00d4               
+ 189 00d4 34020004		li	$v0, PRINT_STRING
+ 190 00d8 3C040000		la	$a0, newline
+     00dc 34840000
+ 191 00e0 0000000C		syscall
+ 192 00e4               	
+ 193 00e4 8FBF0000		lw	$ra, 0($sp)
+ 194 00e8 23BD0004		addi	$sp, $sp, 4
+ 195 00ec 03E00008		jr	$ra
+ 196 00f0               
+ 197 00f0               #-----------------------------
+ 198 00f0               
+ 199 00f0               #
+ 200 00f0               # Name:     read_input
+ 201 00f0               # Description:  reads in stdin input to determine forest fire parameters
+ 202 00f0               #		and stores it in the supplied struct
+ 203 00f0               # Arguments:    a0:     address of the struct to store input with 4 values:
+ 204 00f0               #			- a word to store supplied grid size
+ 205 00f0               #			- a word to store supplied # of generations
+ 206 00f0               #			- an asciiz to store supplied wind direction character
+ 207 00f0               #			- the address of the array to store strings
+ 208 00f0               #		a1:	maximum number of elements in the array
+ 209 00f0               # Returns:      v0:	an integer representing if the grid size was erroneous
+ 210 00f0               # Destroys:     t0, t1, t2, t3, t4, t5
+ 211 00f0               #
+ 212 00f0               read_input:
+ 213 00f0 23BDFFF4		addi	$sp, $sp, -12
+ 214 00f4 AFBF0008		sw	$ra, 8($sp)
+ 215 00f8 AFB10004		sw	$s1, 4($sp)
+ 216 00fc AFB00000		sw	$s0, 0($sp)
+ 217 0100               
+ 218 0100 00808021		move	$s0, $a0
+ 219 0104 00A08821		move	$s1, $a1
+ 220 0108               
+ 221 0108 00804021		move	$t0, $a0	# t0 is pointer to struct
+ 222 010c               
+ 223 010c 34020005		li	$v0, READ_INT  	# read in grid size
+ 224 0110 0000000C		syscall
+ 225 0114 AD020000		sw	$v0, 0($t0)
+ 226 0118 00404821		move	$t1, $v0	# store grid size for reading in array
+ 227 011c 21080004		addi	$t0, $t0, 4	# increment struct pointer
+ 228 0120               
+ 229 0120 34020005		li	$v0, READ_INT  	# read in # of generations
+ 230 0124 0000000C		syscall
+ 231 0128 AD020000		sw	$v0, 0($t0)
+ 232 012c 21080004		addi	$t0, $t0, 4	# increment struct pointer
+ 233 0130               
+ 234 0130 34020008		li	$v0, READ_STRING
+ 235 0134 3C040000		la	$a0, fig_char
+     0138 34840000
+ 236 013c 3405000A		li	$a1, 10		# buffer	
+ 237 0140 0000000C		syscall			# read in wind direction
+ 238 0144 808A0000		lb	$t2, 0($a0)
+ 239 0148 A10A0000		sb	$t2, 0($t0)
+ 240 014c 21080004		addi	$t0, $t0, 4	# increment struct pointer (to word boundry)
+ 241 0150               
+ 242 0150 240AFFFF		li	$t2, -1		# init t2 to -1 (0 once starting loop)
+ 243 0154 250B0000		la	$t3, 0($t0)	# t3 points to string array
+ 244 0158               
+ 245 0158 0229602A		slt	$t4, $s1, $t1	# t4 = 1 if grid size > max
+ 246 015c 11800001		beq	$t4, $zero, read_grid
+ 247 0160 02204821		move	$t1, $s1
+ 248 0164               	# prevents overflowing for grid sizes > max, but leaves error
+ 249 0164               	# checking to error_check, and just accepts first 900 bytes
+ 250 0164               
+ 251 0164               read_grid:
+ 252 0164 01206821		move	$t5, $t1
+ 253 0168 21AD0001		addi	$t5, $t5, 1	# grid size + 1 for null terminator
+ 254 016c 340F0020		li	$t7, 32		# buffer long enough for max and null term
+ 255 0170               
+ 256 0170               read_grid_loop:			# read in each line of characters
+ 257 0170 214A0001		addi	$t2, $t2, 1
+ 258 0174 0149602A		slt	$t4, $t2, $t1	# while t2 < max or grid size (lines)
+ 259 0178 1180000E		beq	$t4, $zero, read_done
+ 260 017c               
+ 261 017c 34020008		li	$v0, READ_STRING
+ 262 0180 3C040000		la	$a0, fig_char
+     0184 34840000
+ 263 0188 01E02821		move	$a1, $t7	
+ 264 018c 0000000C		syscall			# read in grid size + 1 (1 line) chars
+ 265 0190 340E0000		li	$t6, 0
+ 266 0194               
+ 267 0194               store_each_loop:		
+ 268 0194               	# store each char in line in array
+ 269 0194 01C9602A		slt	$t4, $t6, $t1	# t6 < grid size (ignore last null byte)
+ 270 0198 1180FFF5		beq	$t4, $zero, read_grid_loop
+ 271 019c               	
+ 272 019c 808C0000		lb	$t4, 0($a0)	# load in a character into t4
+ 273 01a0 A16C0000		sb	$t4, 0($t3)	# store t4 to array
+ 274 01a4               
+ 275 01a4 216B0001		addi	$t3, $t3, 1	# increment array ptr
+ 276 01a8 21CE0001		addi	$t6, $t6, 1	# incrememnt loop counter
+ 277 01ac 20840001		addi	$a0, $a0, 1	# increment read in string
+ 278 01b0 08000065		j	store_each_loop
+ 279 01b4               
+ 280 01b4               read_done:
+ 281 01b4 02002021		move	$a0, $s0	# restore a0 to addr of struct
+ 282 01b8 02202821		move	$a1, $s1	# restore a1 to max elements
+ 283 01bc 8FBF0008		lw	$ra, 8($sp)
+ 284 01c0 8FB10004		lw	$s1, 4($sp)
+ 285 01c4 8FB00000		lw	$s0, 0($sp)
+ 286 01c8 23BD000C		addi	$sp, $sp, 12
+ 287 01cc 03E00008		jr	$ra	
+ 288 01d0               
+ 289 01d0               	
+ 290 01d0               #-----------------------------
+ 291 01d0               
+ 292 01d0               #
+ 293 01d0               # Name:     error_check
+ 294 01d0               # Description:  runs through inputs to check and print errors if they occur
+ 295 01d0               # Arguments:    a0:     a parameter block (struct) containing 4 values 
+ 296 01d0               #                       - the supplied grid size
+ 297 01d0               #                       - the supplied # of generations
+ 298 01d0               #                       - the supplied wind direction
+ 299 01d0               #                       - the address of the array of strings representing
+ 300 01d0               #			  the grid
+ 301 01d0               # Returns:      v0:	an integer representing whether errors were found.
+ 302 01d0               #			(0, no errors; 1, errors)
+ 303 01d0               # Destroys:     t1, t2, t3, t4, t5
+ 304 01d0               #
+ 305 01d0               error_check:
+ 306 01d0 23BDFFF4		addi	$sp, $sp, -12
+ 307 01d4 AFBF0008		sw	$ra, 8($sp)
+ 308 01d8 AFB00004		sw	$s0, 4($sp)
+ 309 01dc AFB10000		sw	$s1, 0($sp)
+ 310 01e0               
+ 311 01e0 34020000		li	$v0, 0		# will be 0 at func end if no errors
+ 312 01e4 00808021		move	$s0, $a0	# store a0
+ 313 01e8               
+ 314 01e8 8C880000		lw	$t0, 0($a0)	# t0 = grid size val
+ 315 01ec 8C890004		lw	$t1, 4($a0)	# t1 = gen # val
+ 316 01f0 808A0008		lb	$t2, 8($a0)	# t2 = wind direction val
+ 317 01f4               	
+ 318 01f4 340C0004		li	$t4, GRID_MIN
+ 319 01f8               
+ 320 01f8 010C582A		slt	$t3, $t0, $t4
+ 321 01fc 15600022		bne	$t3, $zero, grid_err	# grid size < 4
+ 322 0200 340C001E		li	$t4, GRID_MAX
+ 323 0204               
+ 324 0204 0188582A		slt	$t3, $t4, $t0
+ 325 0208 1560001F		bne	$t3, $zero, grid_err	# grid size > 30
+ 326 020c               
+ 327 020c 0120582A		slt	$t3, $t1, $zero
+ 328 0210 15600021		bne	$t3, $zero, gen_err	# gen < 0
+ 329 0214 340C0014		li	$t4, GEN_MAX
+ 330 0218               
+ 331 0218 0189582A		slt	$t3, $t4, $t1
+ 332 021c 1560001E		bne	$t3, $zero, gen_err	# gen > 30
+ 333 0220               
+ 334 0220 01080018		mul	$t3, $t0, $t0		# grid size^2 is num of bytes
+     0224 00005812
+ 335 0228 34090000		li	$t1, 0			# init t1 to 0
+ 336 022c 2491000C		la	$s1, 12($a0)		# s1 is ptr to array
+ 337 0230               
+ 338 0230               grid_check_loop:
+ 339 0230 012B602A		slt	$t4, $t1, $t3		# while t1 < t3
+ 340 0234 1180000B		beq	$t4, $zero, err_check_cont
+ 341 0238               
+ 342 0238 822D0000		lb	$t5, 0($s1)		# t5 is char to check
+ 343 023c               	
+ 344 023c 340C002E		li	$t4, 46			# load '.'
+ 345 0240 11AC0005		beq	$t5, $t4, incr_check_loop	
+ 346 0244               
+ 347 0244 340C0042		li	$t4, 66			# load 'B'
+ 348 0248 11AC0003		beq	$t5, $t4, incr_check_loop
+ 349 024c               
+ 350 024c 340C0074		li	$t4, 116		# load 't'
+ 351 0250 11AC0001		beq	$t5, $t4, incr_check_loop
+ 352 0254               
+ 353 0254 080000AE		j	bad_char_err	# only reached if char invalid
+ 354 0258               
+ 355 0258               incr_check_loop:
+ 356 0258 21290001		addi	$t1, $t1, 1	# incr loop count
+ 357 025c 22310001		addi	$s1, $s1, 1	# incr array ptr 
+ 358 0260 0800008C		j	grid_check_loop
+ 359 0264               	
+ 360 0264               err_check_cont:
+ 361 0264 340B004E		li	$t3, 78			# load 'N'
+ 362 0268 116A001A		beq	$t3, $t2, check_done	# valid if N
+ 363 026c               
+ 364 026c 340B0053		li	$t3, 83			# load 'S'
+ 365 0270 116A0018		beq	$t3, $t2, check_done	# valid if S
+ 366 0274               
+ 367 0274 340B0045		li	$t3, 69			# load 'E'
+ 368 0278 116A0016		beq	$t3, $t2, check_done	# valid if E
+ 369 027c               
+ 370 027c 340B0057		li	$t3, 87			# load 'W'
+ 371 0280 116A0014		beq	$t3, $t2, check_done	# valid if W
+ 372 0284               
+ 373 0284 080000AA		j	wind_err		# invalid otherwise
+ 374 0288               
+ 375 0288               grid_err:
+ 376 0288               	
+ 377 0288 34020004		li	$v0, PRINT_STRING
+ 378 028c 3C040000		la	$a0, grid_error_str
+     0290 34840000
+ 379 0294 080000B2		j	err_done
+ 380 0298               
+ 381 0298               gen_err:
+ 382 0298 34020004		li	$v0, PRINT_STRING
+ 383 029c 3C040000		la	$a0, gen_error_str
+     02a0 34840000
+ 384 02a4 080000B2		j	err_done
+ 385 02a8               
+ 386 02a8               wind_err:
+ 387 02a8 34020004		li	$v0, PRINT_STRING
+ 388 02ac 3C040000		la	$a0, wind_error_str
+     02b0 34840000
+ 389 02b4 080000B2		j	err_done
+ 390 02b8               
+ 391 02b8               bad_char_err:
+ 392 02b8 34020004		li	$v0, PRINT_STRING
+ 393 02bc 3C040000		la	$a0, bad_char_error_str
+     02c0 34840000
+ 394 02c4 080000B2		j	err_done
+ 395 02c8               
+ 396 02c8               err_done:
+ 397 02c8 0000000C		syscall
+ 398 02cc 34020001		li	$v0, 1
+ 399 02d0 080000B5		j	check_done	
+ 400 02d4               
+ 401 02d4               check_done:
+ 402 02d4 02002021		move	$a0, $s0	# restore a0
+ 403 02d8 8FB10000		lw	$s1, 0($sp)
+ 404 02dc 8FB00004		lw	$s0, 4($sp)
+ 405 02e0 8FBF0008		lw	$ra, 8($sp)
+ 406 02e4 23BD000C		addi	$sp, $sp, 12
+ 407 02e8 03E00008		jr	$ra
+
+
+GEN_MAX             = 00000014   
+GEN_MIN             = 00000000   
+GRID_MAX            = 0000001E   
+GRID_MIN            = 00000004   
+PRINT_INT           = 00000001   
+PRINT_STRING        = 00000004   
+READ_INT            = 00000005   
+READ_STRING         = 00000008   
+array                 00000010 R  data 
+bad_char_err          000002B8 R  text 
+bad_char_error_str    00000439 R  data 
+banner_middle         0000046B R  data 
+banner_outline        0000045B R  data 
+check_done            000002D4 R  text 
+err_check_cont        00000264 R  text 
+err_done              000002C8 R  text 
+error_check           000001D0 R  text 
+fig_char              000003B2 R  data 
+gen_err               00000298 R  text 
+gen_error_str         000003F4 R  data 
+grid_check_loop       00000230 R  text 
+grid_err              00000288 R  text 
+grid_error_str        000003DA R  data 
+incr_check_loop       00000258 R  text 
+input_block           00000000 R  data 
+main                  00000000 RG text 
+main_done             00000060 R  text 
+main_gen_loop         00000044 R  text 
+newline               000003D8 R  data 
+output_banner         0000006C R  text 
+print_board           ******** XG
+read_done             000001B4 R  text 
+read_grid             00000164 R  text 
+read_grid_loop        00000170 R  text 
+read_input            000000F0 R  text 
+space                 000003D6 R  data 
+store_each_loop       00000194 R  text 
+update_board          ******** XG
+wind_err              000002A8 R  text 
+wind_error_str        0000041A R  data 

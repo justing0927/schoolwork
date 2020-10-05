@@ -1,0 +1,122 @@
+# Test this without rebuilding the docker image $> docker-compose up
+# Test this with rebuilding the docker image $> docker-compose up --build
+
+version: '3.7'
+
+services:
+  peerV:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: csci251:latest
+    container_name: peerV
+    working_dir: /csci251
+    networks:
+      - csci251network
+
+    ports:
+      - 9091
+      - 9092
+      - 9093
+      - 7896
+      - 6789
+      - 4445
+    command:
+      - /bin/bash
+      - -c
+      - |
+        echo "Initialize peerV...done!"
+        tail -f /dev/null
+
+
+  peerW:
+    image: csci251:latest
+    container_name: peerW
+    depends_on:
+      - peerV
+    working_dir: /csci251
+    networks:
+      - csci251network
+    ports:
+      - 9091
+      - 9092
+      - 9093
+      - 7896
+      - 6789
+      - 4445
+    command:
+      - /bin/bash
+      - -c
+      - |
+        echo "Initialize peerW...done!"
+        tail -f /dev/null
+
+  peerX:
+    image: csci251:latest
+    container_name: peerX
+    depends_on:
+      - peerV
+    working_dir: /csci251
+    networks:
+      - csci251network
+    ports:
+      - 9091
+      - 9092
+      - 9093
+      - 7896
+      - 6789
+      - 4445
+    command:
+      - /bin/bash
+      - -c
+      - |
+        echo "Initialize peerX...done!"
+        tail -f /dev/null
+
+  peerY:
+    image: csci251:latest
+    container_name: peerY
+    depends_on:
+      - peerV
+    working_dir: /csci251
+    networks:
+      - csci251network
+    ports:
+      - 9091
+      - 9092
+      - 9093
+      - 7896
+      - 6789
+      - 4445
+    command:
+      - /bin/bash
+      - -c
+      - |
+        echo "Initialize peerY...done!"
+        tail -f /dev/null
+
+  peerZ:
+    image: csci251:latest
+    container_name: peerZ
+    depends_on:
+      - peerV
+    working_dir: /csci251
+    networks:
+      - csci251network
+    ports:
+      - 9091
+      - 9092
+      - 9093
+      - 7896
+      - 6789
+      - 4445
+    command:
+      - /bin/bash
+      - -c
+      - |
+        echo "Initialize peerZ...done!"
+        tail -f /dev/null
+
+
+networks:
+  csci251network:

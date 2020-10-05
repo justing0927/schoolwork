@@ -1,0 +1,128 @@
+Load map
+========
+
+Module:  forestfire.obj
+ Text segment:  748 bytes, load point 0x00400000
+ Data segment:  1152 bytes, load point 0x10000000
+ Symbols:
+                  Name Section Mode    Value
+              fig_char   Data   R   0x100003b2
+            read_input   Text   R   0x004000f0
+         output_banner   Text   R   0x0040006c
+         banner_middle   Data   R   0x1000046b
+       store_each_loop   Text   R   0x00400194
+              READ_INT          A   0x00000005
+              grid_err   Text   R   0x00400288
+              wind_err   Text   R   0x004002a8
+               newline   Data   R   0x100003d8
+         main_gen_loop   Text   R   0x00400044
+           error_check   Text   R   0x004001d0
+             read_done   Text   R   0x004001b4
+              err_done   Text   R   0x004002c8
+       grid_check_loop   Text   R   0x00400230
+               GEN_MAX          A   0x00000014
+        wind_error_str   Data   R   0x1000041a
+               GEN_MIN          A   0x00000000
+          PRINT_STRING          A   0x00000004
+       incr_check_loop   Text   R   0x00400258
+                  main   Text   RG  0x00400000
+        grid_error_str   Data   R   0x100003da
+                 space   Data   R   0x100003d6
+            check_done   Text   R   0x004002d4
+           input_block   Data   R   0x10000000
+        banner_outline   Data   R   0x1000045b
+          bad_char_err   Text   R   0x004002b8
+             main_done   Text   R   0x00400060
+              GRID_MAX          A   0x0000001e
+         gen_error_str   Data   R   0x100003f4
+              GRID_MIN          A   0x00000004
+        err_check_cont   Text   R   0x00400264
+    bad_char_error_str   Data   R   0x10000439
+             read_grid   Text   R   0x00400164
+               gen_err   Text   R   0x00400298
+                 array   Data   R   0x10000010
+           READ_STRING          A   0x00000008
+             PRINT_INT          A   0x00000001
+        read_grid_loop   Text   R   0x00400170
+
+Module:  print_board.obj
+ Text segment:  460 bytes, load point 0x004002ec
+ Data segment:  32 bytes, load point 0x10000480
+ Symbols:
+                  Name Section Mode    Value
+          NS_loop_done   Text   R   0x00400408
+              newline2   Data   R   0x10000482
+            print_grid   Text   R   0x00400438
+           grid_corner   Data   R   0x1000048e
+  print_grid_loop_done   Text   R   0x004004b4
+             grid_side   Data   R   0x10000490
+         print_NS_loop   Text   R   0x004003e8
+       print_grid_loop   Text   R   0x00400444
+            gen_border   Data   R   0x10000494
+             print_gen   Text   R   0x0040034c
+               burning   Data   R   0x1000048a
+               grid_NS   Data   R   0x10000492
+                  seed   Data   R   0x1000048c
+                  tree   Data   R   0x10000488
+              char_buf   Data   R   0x10000480
+                space2   Data   R   0x10000484
+          PRINT_STRING          A   0x00000004
+          print_NS_box   Text   R   0x004003c4
+             line_loop   Text   R   0x00400468
+           print_board   Text   RG  0x004002ec
+                 pound   Data   R   0x10000486
+       print_grid_cont   Text   R   0x0040048c
+             PRINT_INT          A   0x00000001
+      print_board_done   Text   R   0x00400330
+
+Module:  update_board.obj
+ Text segment:  988 bytes, load point 0x004004b8
+ Data segment:  936 bytes, load point 0x100004a0
+ Symbols:
+                  Name Section Mode    Value
+             burn_loop   Text   R   0x004005cc
+          t_west_check   Text   R   0x00400738
+            cont_check   Text   R   0x00400840
+               ca_done   Text   R   0x00400588
+                 E_VAL          A   0x0000002e
+               EST_VAL          A   0x00000045
+               WST_VAL          A   0x00000057
+       incrm_tree_loop   Text   R   0x00400700
+     update_board_done   Text   R   0x00400538
+      south_check_done   Text   R   0x00400680
+          t_check_done   Text   R   0x004007d0
+          b_tree_found   Text   R   0x004005e8
+             tree_done   Text   R   0x004007dc
+            tree_found   Text   R   0x00400710
+           south_check   Text   R   0x00400654
+      check_left_bound   Text   R   0x00400870
+        check_all_done   Text   R   0x0040084c
+       incrm_burn_loop   Text   R   0x004005d8
+         out_of_bounds   Text   R   0x0040087c
+         t_south_check   Text   R   0x004007ac
+             burn_done   Text   R   0x00400698
+          update_board   Text   RG  0x004004b8
+               ca_loop   Text   R   0x0040056c
+            east_check   Text   R   0x00400608
+                 T_VAL          A   0x00000074
+            array_copy   Data   R   0x100004a0
+            copy_array   Text   R   0x0040055c
+        new_tree_parse   Text   R   0x004006b8
+               NTH_VAL          A   0x0000004e
+               STH_VAL          A   0x00000053
+            burn_parse   Text   R   0x0040058c
+                 B_VAL          A   0x00000042
+          t_east_check   Text   R   0x00400758
+             tree_loop   Text   R   0x004006f4
+            west_check   Text   R   0x004005ec
+           north_check   Text   R   0x00400624
+             in_bounds   Text   R   0x004007fc
+     check_right_bound   Text   R   0x00400864
+         t_north_check   Text   R   0x00400778
+
+Module:  r2k_startup.obj
+ Text segment:  36 bytes, load point 0x00400894
+ Symbols:
+                  Name Section Mode    Value
+             SYS_EXIT2          A   0x00000011
+        __r2k__entry__   Text   RG  0x00400898

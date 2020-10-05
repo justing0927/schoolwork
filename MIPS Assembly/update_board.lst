@@ -1,0 +1,543 @@
+   1 0000               #
+   2 0000               # FILE:         $File$
+   3 0000               # AUTHOR:       Justin Gonzales, Section #03
+   4 0000               #
+   5 0000               # DESCRIPTION:
+   6 0000               #   This program take a grid representing the forest fire
+   7 0000               #   model and creates a new grid represnting the next generation
+   8 0000               #
+   9 0000               # ARGUMENTS:
+  10 0000               #   None
+  11 0000               #
+  12 0000               # INPUT:
+  13 0000               #   The size of the grid's edges, the generation, the array
+  14 0000               #   representing the current state of the grid
+  15 0000               #
+  16 0000               # OUTPUT:
+  17 0000               #   A visualization of a single generation of the current grid
+  18 0000               #
+  19 0000               #
+  20 0000                
+  21 0000               #-------------------------------
+  22 0000               
+  23 0000               # NUMERIC CONSTANTS
+  24 0000               B_VAL = 66
+  25 0000               E_VAL = 46
+  26 0000               T_VAL = 116
+  27 0000               
+  28 0000               NTH_VAL = 78
+  29 0000               STH_VAL = 83
+  30 0000               EST_VAL = 69
+  31 0000               WST_VAL = 87
+  32 0000               
+  33 0000               #
+  34 0000               # DATA AREA
+  35 0000               #
+  36 0000               	.data
+  37 0000               	.align	2
+  38 0000               
+  39 0000               array_copy:
+  40 0000 00000000		.space	930
+          00000000
+          00000000
+          00000000
+          00000000
+          00000000
+  41 03a2               
+  42 03a2               #
+  43 03a2               # CODE AREA
+  44 03a2               #
+  45 0000               	.text
+  46 0000               	.align	2
+  47 0000               
+  48 0000               	.globl	main
+  49 0000               	.globl	update_board
+  50 0000               
+  51 0000               #
+  52 0000               # EXECUTION BEGINS HERE
+  53 0000               #
+  54 0000               
+  55 0000               #
+  56 0000               # Name: update_board
+  57 0000               # Description: Manages copying an array representing the board into a new
+  58 0000               # array, parsing over the original to update and return the new array
+  59 0000               # (the next generation).
+  60 0000               # Arguments:	a0:	address of the input struct
+  61 0000               #			- a word representing grid size
+  62 0000               #			- a word representing # of generations
+  63 0000               #			- an asciiz representing wind direction
+  64 0000               #			- the address of the array representing the board
+  65 0000               # Returns:	v0:	A new array representing the next board generation
+  66 0000               # Destroys:
+  67 0000               #
+  68 0000               update_board:
+  69 0000               
+  70 0000 23BDFFE0		addi	$sp, $sp, -32
+  71 0004 AFBF0014		sw	$ra, 20($sp)
+  72 0008 AFB40010		sw	$s4, 16($sp)
+  73 000c AFB3000C		sw	$s3, 12($sp)
+  74 0010 AFB20008		sw	$s2, 8($sp)
+  75 0014 AFB10004		sw	$s1, 4($sp)
+  76 0018 AFB00000		sw	$s0, 0($sp)
+  77 001c               
+  78 001c 00808021		move	$s0, $a0
+  79 0020 2491000C		la	$s1, 12($a0)	# s1 is original array
+  80 0024 8C920000		lw	$s2, 0($a0)	# s2 is grid size
+  81 0028 82140008		lb	$s4, 8($s0)	# s4 is wind direction
+  82 002c               
+  83 002c               	# copy original array to a new array
+  84 002c 02202021		move	$a0, $s1
+  85 0030 02520018		mul	$a1, $s2, $s2	# a1 is num of elements (grid size^2)
+     0034 00002812
+  86 0038 3C060000		la	$a2, array_copy	# a2 is new array to copy to
+     003c 34C60000
+  87 0040 0C000029		jal	copy_array
+  88 0044 00C09821		move	$s3, $a2
+  89 0048               
+  90 0048               	# parse through original for burning trees and update new array
+  91 0048 02202021		move	$a0, $s1
+  92 004c 02602821		move	$a1, $s3
+  93 0050 02403021		move	$a2, $s2
+  94 0054 0C000035		jal	burn_parse
+  95 0058               
+  96 0058 02202021		move	$a0, $s1
+  97 005c 02602821		move	$a1, $s3
+  98 0060 02403021		move	$a2, $s2
+  99 0064 02803821		move	$a3, $s4
+ 100 0068               	# parse through original for trees and update new array
+ 101 0068 0C000080		jal	new_tree_parse
+ 102 006c               
+ 103 006c 02602021		move	$a0, $s3	# copy (from addr of new array)
+ 104 0070 02520018		mul	$a1, $s2, $s2	# num elements
+     0074 00002812
+ 105 0078 02203021		move	$a2, $s1	# addr of original array (to copy into)
+ 106 007c               	# copy new array into original
+ 107 007c 0C000029		jal copy_array
+ 108 0080               	# original array now updated.
+ 109 0080               
+ 110 0080               update_board_done:
+ 111 0080 02002021		move	$a0, $s0	# restore a0
+ 112 0084               
+ 113 0084 8FBF0014		lw	$ra, 20($sp)
+ 114 0088 8FB40010		lw	$s4, 16($sp)
+ 115 008c 8FB3000C		lw	$s3, 12($sp)
+ 116 0090 8FB20008		lw	$s2, 8($sp)
+ 117 0094 8FB10004		lw	$s1, 4($sp)
+ 118 0098 8FB00000		lw	$s0, 0($sp)
+ 119 009c 23BD0020		addi	$sp, $sp, 32
+ 120 00a0               	
+ 121 00a0 03E00008		jr	$ra
+ 122 00a4               
+ 123 00a4               #--------------------------------------
+ 124 00a4               
+ 125 00a4               #
+ 126 00a4               # Name: copy_array
+ 127 00a4               # Description: Copies an array representing the board into a new array
+ 128 00a4               # Argumeints:	a0: address of the array to copy
+ 129 00a4               #		a1: num of elements in array
+ 130 00a4               #		a2: address of array to copy to
+ 131 00a4               #
+ 132 00a4               # Returns:	v0: address of copied array
+ 133 00a4               # Destroys:	t0, t1, t2
+ 134 00a4               #
+ 135 00a4               copy_array:
+ 136 00a4 34080000		li	$t0, 0			# i = 0
+ 137 00a8 3C020000		la	$v0, array_copy
+     00ac 34420000
+ 138 00b0 00C05021		move	$t2, $a2
+ 139 00b4               ca_loop:
+ 140 00b4 11050006		beq	$t0, $a1, ca_done	# done if i == a1
+ 141 00b8 80890000		lb	$t1, 0($a0)		# read from a[i]
+ 142 00bc A1490000		sb	$t1, 0($t2)		# write to v[i]
+ 143 00c0               	
+ 144 00c0 20840001		addi	$a0, $a0, 1		# update src ptr
+ 145 00c4 214A0001		addi	$t2, $t2, 1		# update dst ptr
+ 146 00c8 21080001		addi	$t0, $t0, 1		# i++
+ 147 00cc               
+ 148 00cc 0800002D		j	ca_loop
+ 149 00d0               
+ 150 00d0               ca_done:
+ 151 00d0 03E00008		jr	$ra
+ 152 00d4               
+ 153 00d4               #-------------------------------------
+ 154 00d4               
+ 155 00d4               #
+ 156 00d4               # Name: burn_parse
+ 157 00d4               # Description: Parses through original array to update what trees are
+ 158 00d4               # burning in the next generation (the copy array)
+ 159 00d4               # Arguments:	a0: original array addr
+ 160 00d4               #		a1: copied array addr
+ 161 00d4               #		a2: grid size
+ 162 00d4               # Returns: None (Updated array)
+ 163 00d4               # Destroys: t0, t1, t2, t3, t4, t5, t6
+ 164 00d4               #
+ 165 00d4               burn_parse:
+ 166 00d4 23BDFFE8		addi	$sp, $sp, -24
+ 167 00d8 AFBF0014		sw	$ra, 20($sp)
+ 168 00dc AFB40010		sw	$s4, 16($sp)
+ 169 00e0 AFB3000C		sw	$s3, 12($sp)
+ 170 00e4 AFB20008		sw	$s2, 8($sp)
+ 171 00e8 AFB10004		sw	$s1, 4($sp)
+ 172 00ec AFB00000		sw	$s0, 0($sp)
+ 173 00f0               
+ 174 00f0 00808021		move	$s0, $a0
+ 175 00f4 00A08821		move	$s1, $a1
+ 176 00f8 00C09021		move	$s2, $a2
+ 177 00fc               
+ 178 00fc 34080000		li	$t0, 0			# original array i
+ 179 0100 34090042		li	$t1, B_VAL		# t1 holds 'B' value
+ 180 0104 340C002E		li	$t4, E_VAL		# t4 holds '.' value
+ 181 0108 340D0074		li	$t5, T_VAL		# t5 holds 't' value
+ 182 010c 02520018		mul	$t2, $s2, $s2		# t2 is # of grid elements
+     0110 00005012
+ 183 0114               
+ 184 0114               burn_loop:
+ 185 0114               	# parse through original array
+ 186 0114 110A0032		beq	$t0, $t2, burn_done
+ 187 0118 820B0000		lb	$t3, 0($s0)		# read from orig[i]
+ 188 011c 11690004		beq	$t3, $t1, b_tree_found	# found B value
+ 189 0120               
+ 190 0120               incrm_burn_loop:
+ 191 0120 22100001		addi	$s0, $s0, 1		# update orig ptr
+ 192 0124 22310001		addi	$s1, $s1, 1		# update new array ptr
+ 193 0128 21080001		addi	$t0, $t0, 1		# i++
+ 194 012c 08000045		j	burn_loop
+ 195 0130               
+ 196 0130               b_tree_found:
+ 197 0130               	# set burning trees in original array to empty in old
+ 198 0130 A22C0000		sb	$t4, 0($s1)		# update to '.'
+ 199 0134               
+ 200 0134               	# look at cardinal neighbors of burning trees, if they are in bounds
+ 201 0134               
+ 202 0134               west_check:	
+ 203 0134               	# check west neighbor (1 left in array, -1)
+ 204 0134 01002021		move	$a0, $t0
+ 205 0138 2405FFFF		li	$a1, -1
+ 206 013c 0C0000D1		jal	in_bounds
+ 207 0140 10400003		beq	$v0, $zero, east_check
+ 208 0144               
+ 209 0144               	# west neighbor in bounds	
+ 210 0144 820EFFFF		lb	$t6, -1($s0)
+ 211 0148 15AE0001		bne	$t5, $t6, east_check
+ 212 014c               	# west neighbor is 't'
+ 213 014c A229FFFF		sb	$t1, -1($s1)		# set west 't' neighbor to 'B'
+ 214 0150               
+ 215 0150               east_check:
+ 216 0150               	# check east neighbor
+ 217 0150 01002021		move	$a0, $t0
+ 218 0154 34050001		li	$a1, 1
+ 219 0158 0C0000D1		jal	in_bounds
+ 220 015c 10400003		beq	$v0, $zero, north_check
+ 221 0160               	
+ 222 0160               	# east neighbor in bounds
+ 223 0160 820E0001		lb	$t6, 1($s0)
+ 224 0164 15AE0001		bne	$t5, $t6, north_check
+ 225 0168               	# east neighbor is 't'
+ 226 0168 A2290001		sb	$t1, 1($s1)		# set east 't' neighbor to 'B'
+ 227 016c               
+ 228 016c               north_check:
+ 229 016c               	#check north neighbor
+ 230 016c 01002021		move	$a0, $t0
+ 231 0170 2401FFFF		mul	$t6, $s2, -1		# mul grid size by -1
+     0174 02410018
+     0178 00007012
+ 232 017c 020E8020		add	$s0, $s0, $t6		# point s0 to -gridsize($s0)
+ 233 0180 022E8820		add	$s1, $s1, $t6		# point s1 to -gridsize($s0)
+ 234 0184 01C02821		move	$a1, $t6		# north is -grid size (-1 row) away
+ 235 0188 0C0000D1		jal	in_bounds
+ 236 018c 10400003		beq	$v0, $zero, south_check
+ 237 0190               
+ 238 0190               	# north neighbor in bounds here, $s0 already in place
+ 239 0190 820E0000		lb	$t6, 0($s0)
+ 240 0194 15AE0001		bne	$t5, $t6, south_check
+ 241 0198               	# north neighbor confirmed to be 't'
+ 242 0198 A2290000		sb	$t1, 0($s1)
+ 243 019c               
+ 244 019c               south_check:
+ 245 019c 02128020		add $s0, $s0, $s2		# restore s0 to 0($s0)
+ 246 01a0 02328820		add $s1, $s1, $s2		# restore s1 to 0($s1)
+ 247 01a4               
+ 248 01a4 01002021		move	$a0, $t0
+ 249 01a8 02128020		add	$s0, $s0, $s2		# point s0 to gridsize($s0)
+ 250 01ac 02328820		add	$s1, $s1, $s2		# point s1 to gridsize($s1)
+ 251 01b0 02402821		move	$a1, $s2		# south is grid size (1 row) away
+ 252 01b4 0C0000D1		jal	in_bounds
+ 253 01b8 10400003		beq	$v0, $zero, south_check_done
+ 254 01bc               
+ 255 01bc               	# south neighbor in bounds
+ 256 01bc 820E0000		lb	$t6, 0($s0)
+ 257 01c0 15AE0001		bne	$t5, $t6, south_check_done
+ 258 01c4               	# south neighbor is 't'
+ 259 01c4 A2290000		sb	$t1, 0($s1)
+ 260 01c8               
+ 261 01c8               south_check_done:
+ 262 01c8 2401FFFF		mul	$t6, $s2, -1
+     01cc 02410018
+     01d0 00007012
+ 263 01d4 020E8020		add	$s0, $s0, $t6		# restore s0 to 0($s0)
+ 264 01d8 022E8820		add	$s1, $s1, $t6		# restore s1 to 0($s1)
+ 265 01dc               
+ 266 01dc 08000048		j	incrm_burn_loop
+ 267 01e0               
+ 268 01e0               burn_done:
+ 269 01e0 8FBF0014		lw	$ra, 20($sp)
+ 270 01e4 8FB40010		lw	$s4, 16($sp)
+ 271 01e8 8FB3000C		lw	$s3, 12($sp)
+ 272 01ec 8FB20008		lw	$s2, 8($sp)
+ 273 01f0 8FB10004		lw	$s1, 4($sp)
+ 274 01f4 8FB00000		lw	$s0, 0($sp)
+ 275 01f8 23BD0018		addi	$sp, $sp, 24
+ 276 01fc 03E00008		jr	$ra
+ 277 0200               
+ 278 0200               #---------------------------------------
+ 279 0200               
+ 280 0200               #
+ 281 0200               # Name: new_tree_parse
+ 282 0200               # Description: Parses through original array to update where new trees
+ 283 0200               # grow in the the next generation (the copy array).
+ 284 0200               # Arguments:	a0: original array addr
+ 285 0200               #		a1: copied array addr
+ 286 0200               #		a2: grid size
+ 287 0200               #		a3: wind direction	
+ 288 0200               # Returns: None (Updates array)
+ 289 0200               # Destroys: t0, t1, t2, t3, t4, t5, t6
+ 290 0200               #
+ 291 0200               new_tree_parse:
+ 292 0200 23BDFFE8		addi	$sp, $sp, -24
+ 293 0204 AFBF0014		sw	$ra, 20($sp)
+ 294 0208 AFB40010		sw	$s4, 16($sp)
+ 295 020c AFB3000C		sw	$s3, 12($sp)
+ 296 0210 AFB20008		sw	$s2, 8($sp)
+ 297 0214 AFB10004		sw	$s1, 4($sp)
+ 298 0218 AFB00000		sw	$s0, 0($sp)
+ 299 021c               
+ 300 021c 00808021		move	$s0, $a0
+ 301 0220 00A08821		move	$s1, $a1
+ 302 0224 00C09021		move	$s2, $a2
+ 303 0228               
+ 304 0228 34080000		li	$t0, 0		# original array i
+ 305 022c 340C002E		li	$t4, E_VAL	# t4 holds '.' value
+ 306 0230 340D0074		li	$t5, T_VAL	# t5 holds 't' value
+ 307 0234 02520018		mul	$t2, $s2, $s2	# t2 is # of grid elements
+     0238 00005012
+ 308 023c               
+ 309 023c               tree_loop:
+ 310 023c               	# parse through original array
+ 311 023c 110A0039		beq	$t0, $t2, tree_done
+ 312 0240 820B0000		lb	$t3, 0($s0)		# read from orig[i]
+ 313 0244 116D0004		beq	$t3, $t5, tree_found	# found t value
+ 314 0248               
+ 315 0248               incrm_tree_loop:
+ 316 0248 22100001		addi    $s0, $s0, 1	# update orig ptr
+ 317 024c 22310001		addi	$s1, $s1, 1	# update new array ptr
+ 318 0250 21080001		addi	$t0, $t0, 1	# i++
+ 319 0254               
+ 320 0254 0800008F		j	tree_loop
+ 321 0258               
+ 322 0258               tree_found:
+ 323 0258               	# look in wind direction of tree
+ 324 0258 02009821		move	$s3, $s0
+ 325 025c 0220A021		move	$s4, $s1	# save s0 and 1 if modified by north or south	
+ 326 0260               
+ 327 0260 3409004E		li	$t1, NTH_VAL
+ 328 0264 11270016		beq	$t1, $a3, t_north_check
+ 329 0268               
+ 330 0268 34090053		li	$t1, STH_VAL
+ 331 026c 11270021		beq	$t1, $a3, t_south_check
+ 332 0270               
+ 333 0270 34090057		li	$t1, WST_VAL
+ 334 0274 11270002		beq	$t1, $a3, t_west_check
+ 335 0278               
+ 336 0278 34090045		li	$t1, EST_VAL
+ 337 027c 11270008		beq	$t1, $a3, t_east_check
+ 338 0280               
+ 339 0280               t_west_check:
+ 340 0280                       # check west neighbor (1 left in array, -1)
+ 341 0280 01002021	        move    $a0, $t0
+ 342 0284 2405FFFF	        li      $a1, -1
+ 343 0288 0C0000D1	        jal     in_bounds
+ 344 028c 10400022	        beq     $v0, $zero, t_check_done
+ 345 0290               
+ 346 0290                       # west neighbor in bounds
+ 347 0290 820EFFFF	        lb      $t6, -1($s0)
+ 348 0294 158E0020	        bne     $t4, $t6, t_check_done
+ 349 0298                       # west neighbor is '.'
+ 350 0298 A22DFFFF	        sb      $t5, -1($s1)            # set west '.' neighbor to 't'
+ 351 029c 080000C6		j	t_check_done
+ 352 02a0               
+ 353 02a0               t_east_check:
+ 354 02a0                       # check east neighbor
+ 355 02a0 01002021	        move    $a0, $t0
+ 356 02a4 34050001	        li      $a1, 1
+ 357 02a8 0C0000D1	        jal     in_bounds
+ 358 02ac 1040001A	        beq     $v0, $zero, t_check_done
+ 359 02b0               
+ 360 02b0                       # east neighbor in bounds
+ 361 02b0 820E0001	        lb      $t6, 1($s0)
+ 362 02b4 158E0018	        bne     $t4, $t6, t_check_done
+ 363 02b8                       # east neighbor is '.'
+ 364 02b8 A22D0001	        sb      $t5, 1($s1)             # set east '.' neighbor to 't'
+ 365 02bc 080000C6		j	t_check_done
+ 366 02c0               
+ 367 02c0               t_north_check:
+ 368 02c0                       #check north neighbor
+ 369 02c0 01002021	        move    $a0, $t0
+ 370 02c4 2401FFFF	        mul     $t6, $s2, -1            # mul grid size by -1
+     02c8 02410018
+     02cc 00007012
+ 371 02d0 020E8020	        add     $s0, $s0, $t6           # point s0 to -gridsize($s0)
+ 372 02d4 022E8820	        add     $s1, $s1, $t6           # point s1 to -gridsize($s0)
+ 373 02d8 01C02821	        move    $a1, $t6                # north is -grid size (-1 row) away
+ 374 02dc 0C0000D1	        jal     in_bounds
+ 375 02e0 1040000D	        beq     $v0, $zero, t_check_done
+ 376 02e4               
+ 377 02e4                       # north neighbor in bounds here, $s0 already in place
+ 378 02e4 820E0000	        lb      $t6, 0($s0)
+ 379 02e8 158E000B	        bne     $t4, $t6, t_check_done
+ 380 02ec                       # north neighbor confirmed to be '.'
+ 381 02ec A22D0000	        sb      $t5, 0($s1)
+ 382 02f0 080000C6		j	t_check_done
+ 383 02f4               
+ 384 02f4               t_south_check:
+ 385 02f4 01002021	        move    $a0, $t0
+ 386 02f8 02128020	        add     $s0, $s0, $s2           # point s0 to gridsize($s0)
+ 387 02fc 02328820	        add     $s1, $s1, $s2           # point s1 to gridsize($s1)
+ 388 0300 02402821	        move    $a1, $s2                # south is grid size (1 row) away
+ 389 0304 0C0000D1	        jal     in_bounds
+ 390 0308 10400003	        beq     $v0, $zero, t_check_done
+ 391 030c               
+ 392 030c                       # south neighbor in bounds
+ 393 030c 820E0000	        lb      $t6, 0($s0)
+ 394 0310 158E0001	        bne     $t4, $t6, t_check_done
+ 395 0314                       # south neighbor is '.'
+ 396 0314 A22D0000	        sb      $t5, 0($s1)
+ 397 0318               
+ 398 0318               t_check_done:
+ 399 0318 02608021		move	$s0, $s3
+ 400 031c 02808821		move	$s1, $s4
+ 401 0320 08000092		j	incrm_tree_loop	
+ 402 0324               
+ 403 0324               tree_done:
+ 404 0324 8FBF0014		lw	$ra, 20($sp)
+ 405 0328 8FB40010		lw	$s4, 16($sp)
+ 406 032c 8FB3000C		lw	$s3, 12($sp)
+ 407 0330 8FB20008		lw	$s2, 8($sp)
+ 408 0334 8FB10004		lw	$s1, 4($sp)
+ 409 0338 8FB00000		lw	$s0, 0($sp)
+ 410 033c 23BD0018		addi	$sp, $sp, 24
+ 411 0340 03E00008		jr	$ra
+ 412 0344               
+ 413 0344               #---------------------------------------
+ 414 0344               
+ 415 0344               #
+ 416 0344               # Name: in_bounds
+ 417 0344               # Description: Determines if, given the location in a 900 byte array
+ 418 0344               # and the location to check, the destination is in bounds of that array
+ 419 0344               # Arguments:	a0: Destination (From 0 to (grid size^2 - 1))
+ 420 0344               #		a1: Relative neighbor location (negative or positive int)
+ 421 0344               #		a2: grid size
+ 422 0344               # Returns:	v0: 1 if valid, 0 if not.
+ 423 0344               # Destroys: 	t9
+ 424 0344               #
+ 425 0344               in_bounds:
+ 426 0344 23BDFFF0		addi	$sp, $sp, -16
+ 427 0348 AFBF0008		sw	$ra, 8($sp)
+ 428 034c AFB10004		sw	$s1, 4($sp)
+ 429 0350 AFB00000		sw	$s0, 0($sp)
+ 430 0354               
+ 431 0354 00C08821		move	$s1, $a2
+ 432 0358 02310018		mul	$s1, $s1, $s1		
+     035c 00008812
+ 433 0360 2231FFFF		addi	$s1, $s1, -1		# s1 holds upper bound
+ 434 0364 00851020		add	$v0, $a0, $a1		# v0 hold destination
+ 435 0368               
+ 436 0368 0040802A		slt	$s0, $v0, $zero		# check if less than 0
+ 437 036c 16000015		bne	$s0, $zero, out_of_bounds
+ 438 0370               
+ 439 0370 0222802A		slt	$s0, $s1, $v0		# check if greater than max size
+ 440 0374 16000013		bne	$s0, $zero, out_of_bounds
+ 441 0378               	
+ 442 0378               	# check if dest % grid size = grid size - 1.
+ 443 0378 0086001A		rem	$v0, $a0, $a2
+     037c 00001010
+ 444 0380 20D9FFFF		addi	$t9, $a2, -1
+ 445 0384 10590009		beq	$v0, $t9, check_right_bound
+ 446 0388               
+ 447 0388               cont_check:
+ 448 0388               	# check if dest % grid size = 0. 
+ 449 0388 0086001A		rem	$v0, $a0, $a2
+     038c 00001010
+ 450 0390 10400009		beq	$v0, $zero, check_left_bound 
+ 451 0394               
+ 452 0394               check_all_done:
+ 453 0394               	# in bounds
+ 454 0394 34020001		li	$v0, 1
+ 455 0398 8FBF0008		lw	$ra, 8($sp)
+ 456 039c 8FB10004		lw	$s1, 4($sp)
+ 457 03a0 8FB00000		lw	$s0, 0($sp)
+ 458 03a4 23BD0010		addi	$sp, $sp, 16
+ 459 03a8               	# restore saved regs and stack ptr, set v0
+ 460 03a8 03E00008		jr	$ra
+ 461 03ac               
+ 462 03ac               check_right_bound:
+ 463 03ac               	# if neighbor loc is 1, invalid
+ 464 03ac 34190001		li	$t9, 1
+ 465 03b0 10B90004		beq	$a1, $t9, out_of_bounds
+ 466 03b4 080000E2		j	cont_check
+ 467 03b8               
+ 468 03b8               check_left_bound:
+ 469 03b8               	# If neighbor loc is -1, out of bounds
+ 470 03b8 2419FFFF		li	$t9, -1
+ 471 03bc 10B90001		beq	$a1, $t9, out_of_bounds
+ 472 03c0 080000E5		j check_all_done
+ 473 03c4               
+ 474 03c4               out_of_bounds:
+ 475 03c4 34020000		li	$v0, 0
+ 476 03c8 8FBF0008		lw	$ra, 8($sp)
+ 477 03cc 8FB10004		lw	$s1, 4($sp)
+ 478 03d0 8FB00000		lw	$s0, 0($sp)
+ 479 03d4 23BD0010		addi	$sp, $sp, 16
+ 480 03d8               	# restore saved regs, stack ptr, set v0
+ 481 03d8 03E00008		jr	$ra
+
+
+B_VAL              = 00000042   
+EST_VAL            = 00000045   
+E_VAL              = 0000002E   
+NTH_VAL            = 0000004E   
+STH_VAL            = 00000053   
+T_VAL              = 00000074   
+WST_VAL            = 00000057   
+array_copy           00000000 R  data 
+b_tree_found         00000130 R  text 
+burn_done            000001E0 R  text 
+burn_loop            00000114 R  text 
+burn_parse           000000D4 R  text 
+ca_done              000000D0 R  text 
+ca_loop              000000B4 R  text 
+check_all_done       00000394 R  text 
+check_left_bound     000003B8 R  text 
+check_right_bound    000003AC R  text 
+cont_check           00000388 R  text 
+copy_array           000000A4 R  text 
+east_check           00000150 R  text 
+in_bounds            00000344 R  text 
+incrm_burn_loop      00000120 R  text 
+incrm_tree_loop      00000248 R  text 
+main                 ******** XG
+new_tree_parse       00000200 R  text 
+north_check          0000016C R  text 
+out_of_bounds        000003C4 R  text 
+south_check          0000019C R  text 
+south_check_done     000001C8 R  text 
+t_check_done         00000318 R  text 
+t_east_check         000002A0 R  text 
+t_north_check        000002C0 R  text 
+t_south_check        000002F4 R  text 
+t_west_check         00000280 R  text 
+tree_done            00000324 R  text 
+tree_found           00000258 R  text 
+tree_loop            0000023C R  text 
+update_board         00000000 RG text 
+update_board_done    00000080 R  text 
+west_check           00000134 R  text 

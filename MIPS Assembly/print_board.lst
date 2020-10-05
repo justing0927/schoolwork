@@ -1,0 +1,330 @@
+   1 0000               #
+   2 0000               # FILE:         $File$
+   3 0000               # AUTHOR:       Justin Gonzales, Section #03
+   4 0000               #
+   5 0000               # DESCRIPTION:
+   6 0000               #   This program displays a formatted depiction of the
+   7 0000               #   forest fire model grid based on user input
+   8 0000               #
+   9 0000               # ARGUMENTS:
+  10 0000               #   None
+  11 0000               #
+  12 0000               # INPUT:
+  13 0000               #   The size of the grid's edges, the generation, the array
+  14 0000               #   representing the current state of the grid
+  15 0000               #
+  16 0000               # OUTPUT:
+  17 0000               #   A visualization of a single generation of the current grid
+  18 0000               #
+  19 0000               #
+  20 0000                
+  21 0000               #-------------------------------
+  22 0000                
+  23 0000               #
+  24 0000               # Syscall codes
+  25 0000               #
+  26 0000                 PRINT_STRING = 4
+  27 0000                 PRINT_INT = 1
+  28 0000                
+  29 0000               #
+  30 0000               # DATA AREAS
+  31 0000               #
+  32 0000               	.data
+  33 0000               	.align   0      # string data doesnt need aligning
+  34 0000               
+  35 0000               
+  36 0000               char_buf:
+  37 0000 3000    		.asciiz "0"
+  38 0002               	# 30+ char buffer for grid lines
+  39 0002               
+  40 0002               newline2:
+  41 0002 0A00    		.asciiz "\n"
+  42 0004               
+  43 0004               space2:
+  44 0004 2000    		.asciiz " "
+  45 0006               
+  46 0006               pound:
+  47 0006 2300    		.asciiz "#"
+  48 0008               
+  49 0008               tree:
+  50 0008 7400    		.asciiz "t"
+  51 000a               burning:
+  52 000a 4200    	 	.asciiz "B"
+  53 000c               seed:
+  54 000c 2E00    	 	.asciiz "."
+  55 000e               grid_corner:
+  56 000e 2B00    	 	.asciiz "+"
+  57 0010               grid_side:
+  58 0010 7C00    	 	.asciiz "|"
+  59 0012               grid_NS:
+  60 0012 2D00    		.asciiz "-"
+  61 0014               gen_border:
+  62 0014 3D3D3D3D		.asciiz "===="
+          00      
+  63 0019               
+  64 0019               #-------------------------------
+  65 0019               
+  66 0019               #
+  67 0019               # CODE AREA
+  68 0019               #
+  69 0000               	.text
+  70 0000               	.align 2
+  71 0000               
+  72 0000               	.globl	main
+  73 0000               	.globl	print_board
+  74 0000               
+  75 0000               #
+  76 0000               # Name: print_board
+  77 0000               # Description: prints a single generation of a board
+  78 0000               # Arguments:	a0:	address of a struct representing the model info
+  79 0000               #			- grid size (word)
+  80 0000               #			- # of generations (word)
+  81 0000               #			- wind direction (asciiz)
+  82 0000               #			- addr of an array representing current grid
+  83 0000               #		a1:	current generation #
+  84 0000               # Returns: None
+  85 0000               # Destroys: None
+  86 0000               #
+  87 0000               print_board:
+  88 0000 23BDFFF0		addi	$sp, $sp, -16
+  89 0004 AFBF0008		sw	$ra, 8($sp)	# store return address
+  90 0008 AFB10004		sw	$s1, 4($sp)
+  91 000c AFB00000		sw	$s0, 0($sp)	# store s0 (gen num)
+  92 0010               
+  93 0010 00808021		move	$s0, $a0
+  94 0014 00A08821		move	$s1, $a1	# store a0 and a1 for changes
+  95 0018               
+  96 0018 0C000018		jal	print_gen
+  97 001c               
+  98 001c 8E040000		lw	$a0, 0($s0)	# move grid size to a0
+  99 0020 0C000036		jal	print_NS_box
+ 100 0024               
+ 101 0024 02002021		move	$a0, $s0	# move input struct into a0
+ 102 0028 0C000053		jal	print_grid
+ 103 002c               	
+ 104 002c 8E040000		lw	$a0, 0($s0)	# move grid size to a0
+ 105 0030 0C000036		jal	print_NS_box
+ 106 0034               
+ 107 0034 34020004		li	$v0, PRINT_STRING	# print final newline
+ 108 0038 3C040000		la	$a0, newline2
+     003c 34840000
+ 109 0040 0000000C		syscall
+ 110 0044               
+ 111 0044               print_board_done:
+ 112 0044 02002021		move	$a0, $s0
+ 113 0048 02202821		move	$a1, $s1
+ 114 004c               
+ 115 004c 8FBF0008		lw	$ra, 8($sp)
+ 116 0050 8FB10004		lw	$s1, 4($sp)
+ 117 0054 8FB00000		lw	$s0, 0($sp)
+ 118 0058 23BD0010		addi	$sp, $sp, 16
+ 119 005c 03E00008		jr	$ra
+ 120 0060               
+ 121 0060               #-------------------------------------
+ 122 0060               
+ 123 0060               #
+ 124 0060               # Name: print_gen
+ 125 0060               # Description: Prints the generation border for current gen
+ 126 0060               # Arguments: a1 is generation number
+ 127 0060               # Returns: None
+ 128 0060               # Destroys: None
+ 129 0060               #
+ 130 0060               print_gen:
+ 131 0060               	# print border
+ 132 0060 34020004		li	$v0, PRINT_STRING
+ 133 0064 3C040000		la	$a0, gen_border	
+     0068 34840000
+ 134 006c 0000000C		syscall
+ 135 0070               
+ 136 0070               	# print space
+ 137 0070 34020004		li      $v0, PRINT_STRING
+ 138 0074 3C040000		la      $a0, space2
+     0078 34840000
+ 139 007c 0000000C		syscall 
+ 140 0080               
+ 141 0080               	# print pound
+ 142 0080 34020004		li      $v0, PRINT_STRING
+ 143 0084 3C040000		la      $a0, pound
+     0088 34840000
+ 144 008c 0000000C		syscall 
+ 145 0090               
+ 146 0090               	# print gen #
+ 147 0090 34020001		li      $v0, PRINT_INT
+ 148 0094 00A02021		move	$a0, $a1
+ 149 0098 0000000C		syscall 
+ 150 009c               
+ 151 009c               	# print space
+ 152 009c 34020004		li      $v0, PRINT_STRING
+ 153 00a0 3C040000		la      $a0, space2
+     00a4 34840000
+ 154 00a8 0000000C		syscall 
+ 155 00ac               
+ 156 00ac               	# print border
+ 157 00ac 34020004		li      $v0, PRINT_STRING
+ 158 00b0 3C040000		la      $a0, gen_border
+     00b4 34840000
+ 159 00b8 0000000C		syscall 
+ 160 00bc               
+ 161 00bc               	# print newline
+ 162 00bc 34020004		li      $v0, PRINT_STRING
+ 163 00c0 3C040000		la      $a0, newline2
+     00c4 34840000
+ 164 00c8 0000000C		syscall 
+ 165 00cc               
+ 166 00cc 02002021		move	$a0, $s0
+ 167 00d0 02202821		move	$a1, $s1
+ 168 00d4               
+ 169 00d4 03E00008		jr	$ra
+ 170 00d8               
+ 171 00d8               #-------------------------------------------------
+ 172 00d8               
+ 173 00d8               #
+ 174 00d8               # Name: print_NS_box
+ 175 00d8               # Description: Prints the top and bottom of formatted grid box
+ 176 00d8               # Arguments:	a0 is grid size
+ 177 00d8               # Returns: None
+ 178 00d8               # Destroys: t0, t1
+ 179 00d8               #
+ 180 00d8               print_NS_box:
+ 181 00d8 23BDFFF8		addi	$sp, $sp, -8
+ 182 00dc AFBF0004		sw	$ra, 4($sp)
+ 183 00e0 AFB00000		sw	$s0, 0($sp)	
+ 184 00e4               
+ 185 00e4 00808021		move	$s0, $a0
+ 186 00e8               	# print grid corner
+ 187 00e8 34020004		li      $v0, PRINT_STRING
+ 188 00ec 3C040000		la      $a0, grid_corner
+     00f0 34840000
+ 189 00f4 0000000C		syscall 
+ 190 00f8               
+ 191 00f8 34080000		li	$t0, 0
+ 192 00fc               	# for grid size print grid_NS
+ 193 00fc               print_NS_loop:
+ 194 00fc 0110482A		slt	$t1, $t0, $s0
+ 195 0100 11200006		beq	$t1, $zero, NS_loop_done
+ 196 0104               	
+ 197 0104 34020004		li      $v0, PRINT_STRING
+ 198 0108 3C040000		la      $a0, grid_NS
+     010c 34840000
+ 199 0110 0000000C		syscall 
+ 200 0114               
+ 201 0114 21080001		addi	$t0, $t0, 1
+ 202 0118 0800003F		j	print_NS_loop
+ 203 011c               
+ 204 011c               NS_loop_done:
+ 205 011c               	# print grid corner
+ 206 011c 34020004		li      $v0, PRINT_STRING
+ 207 0120 3C040000		la      $a0, grid_corner
+     0124 34840000
+ 208 0128 0000000C		syscall 
+ 209 012c               
+ 210 012c               	# print newline
+ 211 012c 34020004		li      $v0, PRINT_STRING
+ 212 0130 3C040000		la      $a0, newline2
+     0134 34840000
+ 213 0138 0000000C		syscall 
+ 214 013c               
+ 215 013c 8FBF0004		lw	$ra, 4($sp)
+ 216 0140 8FB00000		lw	$s0, 0($sp)	# restore s0	
+ 217 0144               
+ 218 0144 23BD0008		addi	$sp, $sp, 8
+ 219 0148 03E00008		jr	$ra
+ 220 014c               
+ 221 014c               #--------------------------------------------------
+ 222 014c               
+ 223 014c               #
+ 224 014c               # Name: print_grid
+ 225 014c               # Description: Loops through array representing the grid, printing
+ 226 014c               # each of the characters, with '|' character before and after each
+ 227 014c               # line
+ 228 014c               # Arguments: a0 as in print_board
+ 229 014c               # Returns: None
+ 230 014c               # Destroys: t0, t1, t2, t3, t4, t5
+ 231 014c               #
+ 232 014c               print_grid:
+ 233 014c               	# setup for grid loop
+ 234 014c 8C880000		lw	$t0, 0($a0)	# t0 is grid size
+ 235 0150 248C000C		la	$t4, 12($a0)	# t4 is ptr to array	
+ 236 0154 34090000		li	$t1, 0		# init loop counter
+ 237 0158               
+ 238 0158               print_grid_loop:
+ 239 0158               	# for grid size
+ 240 0158 0128502A		slt	$t2, $t1, $t0
+ 241 015c 1140001A		beq	$t2, $zero, print_grid_loop_done
+ 242 0160               
+ 243 0160               	# print grid_side
+ 244 0160 34020004		li      $v0, PRINT_STRING
+ 245 0164 3C040000		la      $a0, grid_side
+     0168 34840000
+ 246 016c 0000000C		syscall 
+ 247 0170               
+ 248 0170               	# set up for printing line
+ 249 0170 340B0000		li	$t3, 0		# init line loop counter
+ 250 0174 3C040000		la	$a0, char_buf	# set a0 to a char buffer
+     0178 34840000
+ 251 017c               
+ 252 017c               line_loop:
+ 253 017c               	# prints each of the characters from the current line
+ 254 017c               	
+ 255 017c               	# for grid size
+ 256 017c 0168502A		slt	$t2, $t3, $t0
+ 257 0180 11400007		beq	$t2, $zero, print_grid_cont
+ 258 0184               
+ 259 0184               	# get and print current char
+ 260 0184 818D0000		lb	$t5, 0($t4)
+ 261 0188 A08D0000		sb	$t5, 0($a0)
+ 262 018c               
+ 263 018c 34020004		li	$v0, PRINT_STRING
+ 264 0190 0000000C		syscall			# print a0 (current character)
+ 265 0194               
+ 266 0194 216B0001		addi	$t3, $t3, 1	# increment line loop counter
+ 267 0198 218C0001		addi	$t4, $t4, 1	# increment array ptr
+ 268 019c               
+ 269 019c 0800005F		j	line_loop
+ 270 01a0               
+ 271 01a0               print_grid_cont:
+ 272 01a0               	# print grid side
+ 273 01a0 34020004		li      $v0, PRINT_STRING
+ 274 01a4 3C040000		la      $a0, grid_side
+     01a8 34840000
+ 275 01ac 0000000C		syscall 
+ 276 01b0               
+ 277 01b0               	# print newline
+ 278 01b0 34020004		li      $v0, PRINT_STRING
+ 279 01b4 3C040000		la      $a0, newline2
+     01b8 34840000
+ 280 01bc 0000000C		syscall 
+ 281 01c0               	
+ 282 01c0 21290001		addi	$t1, $t1, 1
+ 283 01c4               
+ 284 01c4 08000056		j	print_grid_loop
+ 285 01c8               
+ 286 01c8               print_grid_loop_done:
+ 287 01c8 03E00008		jr	$ra
+
+
+NS_loop_done            0000011C R  text 
+PRINT_INT             = 00000001   
+PRINT_STRING          = 00000004   
+burning                 0000000A R  data 
+char_buf                00000000 R  data 
+gen_border              00000014 R  data 
+grid_NS                 00000012 R  data 
+grid_corner             0000000E R  data 
+grid_side               00000010 R  data 
+line_loop               0000017C R  text 
+main                    ******** XG
+newline2                00000002 R  data 
+pound                   00000006 R  data 
+print_NS_box            000000D8 R  text 
+print_NS_loop           000000FC R  text 
+print_board             00000000 RG text 
+print_board_done        00000044 R  text 
+print_gen               00000060 R  text 
+print_grid              0000014C R  text 
+print_grid_cont         000001A0 R  text 
+print_grid_loop         00000158 R  text 
+print_grid_loop_done    000001C8 R  text 
+seed                    0000000C R  data 
+space2                  00000004 R  data 
+tree                    00000008 R  data 

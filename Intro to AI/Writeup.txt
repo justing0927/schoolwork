@@ -1,0 +1,148 @@
+Justin Gonzales - Lab 2 Writeup
+--------------------------------------------------------READ ME---------------------------------------------------------
+(How to use lab2.py)
+lab2.py accepts specific command-line arguments in order to do its required functions, these include:
+	train <examples> <hypothesisOut> <learning-type> (as outlined in the requirements)
+
+predict <hypothesis> <file> (as outlined in the requirements)
+
+test <hypothesis> <examples>, which simply uses a given hypothesis (as in prediction) and examples (as in train) to det-
+ermine the error rate of the hypothesis.
+
+All files should be in the SAME directory as the lab2.py file, unless you're providing the whole path.
+
+The code is commented throughout for a general idea of what is happening throughout the program, more specificity for t-
+he training and prediction processes are detailed below.
+
+IMPORTANT NOTE: My program uses the data_file.read() command with utf-8 encoding. If there are unfamiliar unicode charac
+ters, a more appropriate encoding will need to be used in (line 361) parse_examples and (line 375) parse_file.
+
+IMPORTANT NOTE: If sentences that are entirely numbers are used, the program classifies them as english, which can incr-
+ease the error rate significantly in large data sets.
+--------------------------------------------------------BEST TREE-------------------------------------------------------
+The Best Tree as required for the hypothesis is the file best.dat. It contains a pickled serialization of an decision
+tree implementation that gave the 'best' results during testing. My error rate usually average to about a 6-7% throughout
+various training sets.
+
+The file out.dat is my best adaboost hypothesis, which regularly got 0% error on trainind samples similar to the example
+provided in the lab writeup, however, depending on the size of the training, this could go up to 12-15%, rarely reaching
+25%+.
+
+So it's difficult to say what the 'best' tree is for testing, submitting the out.dat for the purposes of classifying 10
+lines similar to train.dat may be the best predictive option. However, my 'best' hypothesis is certainly the decision
+tree.
+
+--------------------------------------------------------FEATURES--------------------------------------------------------
+Each of features, denoted as attributes (usually shortened to ‘attr’) in the program, are as follows:
+
+attr1 # Whether or not the string contains the string ' de '.
+	As one of the articles in Dutch - finding ‘ de ‘ isolated from any other word is pretty much a guarantee that the 15
+	 word snippet is Dutch. Of course, not all snippets will have this article, but most will.
+
+attr2 = dict()  # Whether or not the string contains the string ' het '.
+	As one of the articles in Dutch - finding ‘ het ‘ isolated from any other word is pretty much a guarantee that the
+	15 word snippet is Dutch. Of course, not all snippets will have this article, but most will.
+
+attr3 = dict()  # Whether or not the string contains the string ' the '.
+	As one of the articles in English - finding ‘ the ‘ isolated from any other word is pretty much a guarantee that the
+	 15 word snippet is English. Of course, not all snippets will have this article, but most will.
+
+attr4 = dict()  # Whether or not the string contains the string 'a'.
+	As one of the articles in English - finding ‘ a ‘ isolated from any other word is pretty much a guarantee that the
+	15 word snippet is English. Of course, not all snippets will have this article, but most will.
+
+attr5 = dict()  # Whether or not the string contains 15 or more 'e' characters.
+	While ‘e’ is the most common letter in both Dutch and English, Dutch does have a higher ‘e’ frequency, sometimes in-
+	credibly high. While this wasn’t the most stringent attribute - it worked well in cases where both phrases had long
+	words, as they oftentimes included some of the rarer English letters, and skewed any decisions based on avg word le-
+	ngth or highest word lengths.
+
+attr6 = dict()  # Whether or not the string contains 2 or more 'v' characters.
+	This is simply a much more common letter in Dutch than in English.
+
+attr7 = dict()  # Whether or not the string contains any 'z' characters.
+	Again, much more common in Dutch than in English.
+
+attr8 = dict()  # Whether or not the string's avg word length is greater than 5.5.
+	Through testing large amounts of text, as well as many various 15 word snippets, while the average word length was
+	often simply higher for Dutch than English, 5.5 tended to be one that signified the string was Dutch, especially if
+	English hyphenated words were counted as two words.
+
+attr9 = dict()  # Whether or not the string contains more than one 12 letter word.
+	Dutch, like German, can have many words of a long length that are many smaller words put together. Similarly to the
+	8th attribute, if you exclude hyphenated English words, this is a pretty good indicator that the snippet is Dutch.
+
+attr10 = dict()  # Whether or not the string contains the string 'aa'.
+	While aardvark and bazaar are in English, most sentences don’t contain that word. Contrasted to Dutch, ‘aa’ is rath-
+	er common - making it a good delimiter. This was probably the most polarizing form of ‘vowel placement’ that I could
+	find.
+
+attr11 = dict()  # Whether or not the string contains the string 'ij'.
+	This attribute, as discussed below, works incredibly well. It is quite common in Dutch and rarely ever appears in
+	English.
+
+attr12 = dict()  # Whether or not the string contains the string 'th'.
+This attribute, as discussed below, works incredibly well. It is quite common in English and is much rarer in Dutch.
+
+attr13 = dict()  # Whether or not the string contains more 't' than 'n' characters.
+	Statistically, ‘t’ is the second most common letter in the English language. The second most common letter in Dutch
+	is ‘n’ - so this is a simple test based on letter frequency.
+
+Out of these, the final three were the most powerful. The first 10 were mostly from my own testing with large sets of
+data to determine important differences between English and Dutch. However, the last three came directly from similar
+large scale research into the biggest differences between English and Dutch - the string ‘ij’ appearing almost never in
+English and quite often in Dutch (and vice versa for ‘th’), and pitting the most common letters against each other.
+These three together make a powerful decision tree for classification.
+
+-----------------------------------------------------DECISION TREE------------------------------------------------------
+The Decision Tree Learning was entirely the implementation of our Decision Tree Learning algorithm.
+
+Examples were represented as a dictionary, of the string mapped to it’s ‘en’ or ‘nl’ value. For the purposes of the lab,
+and as perhaps some inherent biases, English was represented as the ‘goal’ value.
+
+The attributes were a similar dictionary mapping first the example string to true and false, the serialized tree however
+just takes advantage of those true false values to form the decision tree.
+
+The output was a ‘DecisionTree’ class object, as can be seen on line 52. These simply chained together by holding the
+root test as the node, and the branches being the dictionaries mapping to other Decision Trees (or ‘en’/’nl’ classifica-
+tion) by True and False inputs.
+
+Using the given example testing data, along with a few other sentences, I formed a chart similar to what was seen in the
+textbook for easier management, which can be seen here:
+
+https://docs.google.com/document/d/1pEI8k67PeRfH1v49cXN-3Ql6uK7XFxPVO3pTSzrWKLo/edit?usp=sharing
+(These did not include the final few attributes as they didnt fit, and as mentioned, they mapped almost exactly to the
+goal)
+The testing data went beyond this to include a wider breadth of sources, by attempting to include sentences from various
+ random wikipedia pages, as well as sentences that focused on nouns, descriptions, any different writing styles I could
+ find, etc.
+
+While testing, I found the most important attributes (via the importance functions) to be attribute 12 and 11 respectiv-
+ely. These two were basically enough for a classification algorithm by itself, and by continuing to add values, could
+lead to overfitting. This was followed by attribute 13, significantly below in level of importance, followed by another
+significant drop to either attributes 10 (string including ‘aa’) or 9 (more than 2 12 letter words) depending on the te-
+sting set. After that, the importance values were rather low and not very decisive.
+Due to this I kept my maximum tree depth at 6, which tended to give the best results although occassionally lower depths
+would succeed better for certain training sets. This also made pruning rather obsolete.
+My final decision tree gave classification results with an error rate of ~6%, on 10 string examples (like test.dat), and
+a variance of about 1% either way on larger data sets.
+
+---------------------------------------------------------BOOSTING-------------------------------------------------------
+The boosting worked as described in the adaboost algorithm, creating weights to apply to a learning function
+(learning_func_weights(), similar to dt_learning()). Then, as the algorithm specifies, it would use these weights in the
+learning function to create hypotheses, which would then be tested to determine error on failure and improve weights on
+successes, be applied to hypothesis weights for voting, and thus come up with a majority hypothesis tree. The boosted
+dt_learning algorithm succeeded beautifully on smaller sets, oftentimes getting 0% error rate. On larger sets, this
+would rise to 8-12%, losing out to the decision tree.
+
+On smaller data sets, just one tree would be useful enough to get 5-% error rates, on larger data sets, avoiding problems
+such as numbers being classified as english and dropping rates, I found 50 decision stumps to still work well, but
+running the program with more only tended to slow it and only had (perhaps an overfitting) problems with large data sets.
+
+----------------------------------------------------------MISC----------------------------------------------------------
+Scraping web data from wikipedia for larger data sets tended to increase my percent error, as certain problems with
+names, or scraping lists of numbers, or places named from languages outside of English and Dutch, or just math equations
+would all skew the data. Training on smaller concise sets tended to result in the lowest % error for large and small sets.
+
+Due to the nature of Wikipedia, many lines will contain foreign names and places and things that skew testing the average
+language's sentence.
